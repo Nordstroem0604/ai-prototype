@@ -1,0 +1,29 @@
+/* Header.css */
+
+.header-container {
+    text-align: center;
+    padding: 20px;
+    background-color: #f0f4f8;
+    border-bottom: 2px solid #ddd;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .main-header {
+    font-size: 32px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  .highlight {
+    color: #007bff;
+    font-style: italic;
+  }
+  
+  .description {
+    font-size: 18px;
+    color: #666;
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+  
