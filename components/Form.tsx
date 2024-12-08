@@ -1,7 +1,7 @@
 import React, { FormEvent, useState } from "react";
 import { Loader, Placeholder } from "@aws-amplify/ui-react";
-import { Schema } from "./interface";
 import { generateClient } from "aws-amplify/data";
+import { Schema } from "../amplify/data/resource";
 import "./Form.css";
 
 const amplifyClient = generateClient<Schema>({
@@ -19,17 +19,16 @@ export const Form: React.FC = () => {
     try {
       const formData = new FormData(event.currentTarget);
 
-      // Use `any` if TypeScript cannot resolve `askBedrock` correctly
-      const { data, errors } = await (amplifyClient.queries as any).askBedrock({
+      // Properly typed `askBedrock` method
+      const response = await amplifyClient.queries.askBedrock({
         query: formData.get("query")?.toString() || "",
         template: formData.get("template")?.toString() || "",
       });
 
-      if (!errors) {
-        setResult(data?.body || "No data returned");
+      if (response && response.data) {
+        setResult(response.data.body || "No data returned");
       } else {
-        console.log('Data', data)
-        console.log('Errors', errors);
+        console.log("Data", response);
         setResult("An error occurred. Please check the console for details.");
       }
     } catch (e) {
@@ -77,5 +76,6 @@ export const Form: React.FC = () => {
     </div>
   );
 };
+
 
 

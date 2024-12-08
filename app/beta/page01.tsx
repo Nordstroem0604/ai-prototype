@@ -3,33 +3,7 @@
 import React, { useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
-interface BlinkingCursorProps {
-  isDark: boolean;
-}
-
-const BlinkingCursor: React.FC<BlinkingCursorProps> = ({ isDark }) => (
-  <svg 
-    width="32" 
-    height="48" 
-    viewBox="0 0 32 48" 
-    className="inline-block ml-1 translate-y-1"
-  >
-    <rect 
-      width="32" 
-      height="48" 
-      fill={isDark ? "white" : "black"}
-    >
-      <animate 
-        attributeName="opacity"
-        values="1;1;0;0"
-        dur="1.4s"
-        repeatCount="indefinite"
-      />
-    </rect>
-  </svg>
-);
-
-const Page: React.FC = () => {
+const BetaPage: React.FC = () => {
   const [isDark, setIsDark] = useState(true);
 
   return (
@@ -45,18 +19,25 @@ const Page: React.FC = () => {
           <Moon className="w-6 h-6 text-black" />
         )}
       </button>
+
       {/* Main content container */}
-      <div className={`${isDark ? 'text-white' : 'text-black'} text-6xl font-sans flex items-center transition-colors duration-300`}>
-        {/* Main text */}
-        <span>freyai</span>
-        {/* SVG Blinking cursor */}
-        <BlinkingCursor isDark={isDark} />
+      <div className="max-w-2xl px-6 text-center">
+        <div className={`${isDark ? 'text-white' : 'text-black'} text-6xl font-sans mb-8 transition-colors duration-300`}>
+          Welcome to the Beta
+        </div>
+        <p className={`${isDark ? 'text-gray-300' : 'text-gray-700'} text-xl mb-12 transition-colors duration-300`}>
+          Thank you for your interest in freyai. We're excited to have you join our beta testing community.
+        </p>
+        <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-lg transition-colors duration-300`}>
+          We'll be in touch soon with your access details.
+        </p>
       </div>
+
       {/* Bottom text container */}
       <div className="absolute bottom-8 w-full px-8">
         <div className={`flex justify-between ${isDark ? 'text-white' : 'text-black'} text-sm transition-colors duration-300`}>
-          {/* Bottom left text with link */}
-          <a href="/beta" className="hover:underline">try the beta</a>
+          {/* Bottom left text */}
+          <a href="/" className="hover:underline">← back home</a>
           {/* Bottom right text */}
           <span>#VCFO</span>
         </div>
@@ -65,4 +46,4 @@ const Page: React.FC = () => {
   );
 };
 
-export default Page;
+export default BetaPage;
