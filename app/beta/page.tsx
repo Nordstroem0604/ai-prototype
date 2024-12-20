@@ -1,105 +1,230 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Moon, Sun } from 'lucide-react';
-import { Authenticator } from "@aws-amplify/ui-react";
-import { Amplify } from "aws-amplify";
-import { getCurrentUser } from 'aws-amplify/auth';
-import { AuthUser } from '@aws-amplify/auth';
-import outputs from "../../amplify_outputs.json";
-import "@aws-amplify/ui-react/styles.css";
+import React, { useState, useRef, KeyboardEvent } from 'react';
+import { Sun, Moon, Globe2, Send, LayoutPanelLeft } from 'lucide-react';
 
-// Configure Amplify with your settings
-Amplify.configure(outputs);
-
-interface BetaContentProps {
-  signOut?: () => void;
-  user?: AuthUser;
+interface BlinkingCursorProps {
+  isDark: boolean;
+  size?: number;
 }
 
-const BetaContent: React.FC<BetaContentProps> = ({ signOut }) => {
-  const [isDark, setIsDark] = useState(true);
-  const [userEmail, setUserEmail] = useState<string>('');
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const { signInDetails } = await getCurrentUser();
-        // Safely access the email with optional chaining
-        const email = signInDetails?.loginId || '';
-        setUserEmail(email);
-      } catch (error) {
-        console.error('Error fetching user:', error);
-      }
-    };
-
-    fetchUser();
-  }, []);
-
+const BlinkingCursor: React.FC<BlinkingCursorProps> = ({ isDark, size = 24 }) => {
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-black' : 'bg-white'} flex flex-col justify-center items-center relative transition-colors duration-300`}>
-      {/* Theme toggle and sign out button */}
-      <div className="absolute top-8 right-8 flex items-center gap-4">
-        <button
-          onClick={() => setIsDark(!isDark)}
-          className="p-2 rounded-full hover:bg-opacity-10 hover:bg-gray-500"
-        >
-          {isDark ? (
-            <Sun className="w-6 h-6 text-white" />
-          ) : (
-            <Moon className="w-6 h-6 text-black" />
-          )}
-        </button>
-        {signOut && (
-          <button
-            onClick={signOut}
-            className={`px-4 py-2 rounded-md ${
-              isDark
-                ? 'bg-white text-black hover:bg-gray-200'
-                : 'bg-black text-white hover:bg-gray-800'
-            } transition-colors duration-300`}
-          >
-            Sign Out
-          </button>
-        )}
-      </div>
-
-      {/* Main content container */}
-      <div className="max-w-2xl px-6 text-center">
-        <div className={`${isDark ? 'text-white' : 'text-black'} text-6xl font-sans mb-8 transition-colors duration-300`}>
-          Welcome to the Beta
-        </div>
-        {userEmail && (
-          <p className={`${isDark ? 'text-gray-300' : 'text-gray-700'} text-xl mb-4 transition-colors duration-300`}>
-            Hello, {userEmail}!
-          </p>
-        )}
-        <p className={`${isDark ? 'text-gray-300' : 'text-gray-700'} text-xl mb-12 transition-colors duration-300`}>
-          Thank you for your interest in freyai. We&apos;re excited to have you join our beta testing community.
-        </p>
-        <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} text-lg transition-colors duration-300`}>
-          We&apos;ll be in touch soon with your access details.
-        </p>
-      </div>
-
-      {/* Bottom text container */}
-      <div className="absolute bottom-8 w-full px-8">
-        <div className={`flex justify-between ${isDark ? 'text-white' : 'text-black'} text-sm transition-colors duration-300`}>
-          <Link href="/" className="hover:underline">← back home</Link>
-          <span>#VCFO</span>
-        </div>
+    <div className="inline-block ml-1 translate-y-1">
+      <div className="animate-pulse">
+        <LayoutPanelLeft
+          size={size}
+          color={isDark ? "white" : "black"}
+          className="transform transition-transform duration-700 hover:scale-125"
+        />
       </div>
     </div>
   );
 };
 
-const BetaPage: React.FC = () => {
-  return (
-    <Authenticator>
-      {(props) => <BetaContent {...props} />}
-    </Authenticator>
-  );
-};
+interface QuickReplyButtonProps {
+  text: string;
+  onClick: () => void;
+}
 
-export default BetaPage;
+const QuickReplyButton: React.FC<QuickReplyButtonProps> = ({ text, onClick }) => (
+  <button
+    onClick={onClick}
+    className="px-4 py-2 rounded-full text-sm text-white bg-black hover:bg-black/80 transition-colors duration-300"
+  >
+    {text}
+  </button>
+);
+
+interface ChatMessageProps {
+  message: { content: string; isUser: boolean };
+  isDark: boolean;
+}
+
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, isDark }) => (
+  <div className={`max-w-xl ${message.isUser ? 'ml-auto' : ''}`}>
+    <div
+      className={`rounded-lg px-4 py-2 ${
+        message.isUser
+          ? 'ml-auto bg-black text-white w-fit'
+          : isDark
+          ? 'text-white w-full'
+          : 'text-gray-900 w-full'
+      } ${!message.isUser ? 'whitespace-pre-line' : ''}`}
+    >
+      {message.content}
+    </div>
+  </div>
+);
+
+const ChatInterface: React.FC = () => {
+    const [isDark, setIsDark] = useState(true);
+    const [language, setLanguage] = useState<'en' | 'da'>('en');
+    const [messages, setMessages] = useState<{ content: string; isUser: boolean }[]>([
+      {
+        content: 'Welcome to freyai. What companies do you want to explore today?',
+        isUser: false,
+      },
+    ]);
+    const [inputValue, setInputValue] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
+  
+    // Update only the initial system message on language change
+    React.useEffect(() => {
+      setMessages((prev) => {
+        // Update only the first system message if it exists
+        if (prev.length > 0 && !prev[0].isUser) {
+          return [
+            {
+              content:
+                language === 'en'
+                  ? 'Welcome to freyai. What companies do you want to explore today?'
+                  : 'Velkommen til freyai. Hvilke virksomheder vil du udforske i dag?',
+              isUser: false,
+            },
+            ...prev.slice(1), // Retain all other messages
+          ];
+        }
+        return prev;
+      });
+    }, [language]);
+  
+    const quickReplies: Record<'en' | 'da', string[]> = {
+      en: ['Who are you?', 'How can you help me (features)?', 'What data do you have access to?'],
+      da: ['Hvem er du?', 'Hvordan kan du hjælpe mig (funktioner)?', 'Hvilke data har du adgang til?'],
+    };
+  
+    const responses: Record<
+      'en' | 'da',
+      Record<string, string>
+    > = {
+      en: {
+        'Who are you?':
+          "I'm Freyai, an advanced AI assistant specializing in financial analysis and machine learning insights. I'm here to help you interpret complex financial data, provide insights on company performance, and explain machine learning model outputs in clear, actionable terms. How can I assist you today?",
+        'How can you help me (features)?':
+          "I can help you with:\n\n📊 Financial data analysis and visualization\n🔍 Credit risk assessment and modeling\n📈 Market trend analysis and forecasting\n🤖 ML model interpretation and insights\n💡 Strategic business recommendations",
+        'What data do you have access to?':
+          "I have access to comprehensive financial and business data, including:\n\n📈 Historical market data\n📊 Company financials and metrics\n📑 Industry reports and trends\n🔍 Credit risk assessments\n📋 Regulatory filings",
+      },
+      da: {
+        'Hvem er du?':
+          'Jeg er Freyai, en avanceret AI-assistent specialiseret i finansiel analyse og machine learning-indsigt. Jeg er her for at hjælpe dig med at fortolke komplekse finansielle data, give indsigt i virksomheders præstation og forklare machine learning-modeloutput i klare, handlingsorienterede termer. Hvordan kan jeg hjælpe dig i dag?',
+        'Hvordan kan du hjælpe mig (funktioner)?':
+          'Jeg kan hjælpe dig med:\n\n📊 Finansiel dataanalyse og visualisering\n🔍 Kreditrisikovurdering og modellering\n📈 Markedstrendanalyse og forecasting\n🤖 ML-model fortolkning og indsigt\n💡 Strategiske forretningsanbefalinger',
+        'Hvilke data har du adgang til?':
+          'Jeg har adgang til omfattende finansielle og forretningsmæssige data, herunder:\n\n📈 Historiske markedsdata\n📊 Virksomhedsøkonomi og metrikker\n📑 Brancherapporter og trends\n🔍 Kreditrisikovurderinger\n📋 Regulatoriske indberetninger',
+      },
+    };
+  
+    const handleSubmit = (content: string) => {
+      if (!content.trim()) return;
+  
+      setMessages((prev) => [...prev, { content, isUser: true }]);
+  
+      const response =
+        responses[language][content] ||
+        (language === 'en'
+          ? "I understand you're interested in exploring this topic. Could you tell me more about your specific needs?"
+          : 'Jeg forstår, at du er interesseret i dette emne. Kan du fortælle mig mere om dine specifikke behov?');
+  
+      setTimeout(() => {
+        setMessages((prev) => [...prev, { content: response, isUser: false }]);
+      }, 500);
+  
+      setInputValue('');
+    };
+  
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit(inputValue);
+      }
+    };
+  
+    const bgColor = isDark ? 'bg-slate-800' : 'bg-gray-50';
+    const textColor = isDark ? 'text-white' : 'text-slate-900';
+    const inputBgColor = isDark ? 'bg-slate-700/50' : 'bg-white';
+  
+    return (
+      <div className={`min-h-screen ${bgColor} flex flex-col transition-colors duration-300`}>
+        {/* Header */}
+        <div className={`py-3 px-6 ${textColor}`}>
+          <div className="max-w-5xl mx-auto flex justify-between items-center">
+            {/* Left: Brand Name */}
+            <div className={`text-2xl font-sans flex items-center ${textColor}`}>
+              <span>freyai</span>
+              <BlinkingCursor isDark={isDark} />
+            </div>
+
+            {/* Center: BETA Label */}
+            <div className="text-xs font-sans tracking-wider">
+                0.1.0-alpha.1
+            </div>
+
+            {/* Right: Language and Theme Toggle */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setLanguage(language === 'en' ? 'da' : 'en')}
+                className={`p-2 rounded-full hover:bg-opacity-10 hover:bg-gray-500 flex items-center gap-2 ${textColor} opacity-80 hover:opacity-100`}
+              >
+                <Globe2 className="w-5 h-5" />
+                <span className="text-sm font-medium">{language.toUpperCase()}</span>
+              </button>
+              <button
+                onClick={() => setIsDark(!isDark)}
+                className={`p-2 rounded-full hover:bg-opacity-10 hover:bg-gray-500 ${textColor} opacity-80 hover:opacity-100`}
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+  
+        {/* Main content */}
+        <div className="flex-1 overflow-auto">
+          <div className="max-w-2xl mx-auto px-4 pt-12">
+            <div className="space-y-6 mb-6">
+              {messages.map((message, index) => (
+                <ChatMessage key={index} message={message} isDark={isDark} />
+              ))}
+            </div>
+            <div className="space-y-4">
+              <div className="relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={language === 'en' ? 'Message here' : 'Skriv din besked her'}
+                  className={`w-full px-4 py-3 pr-12 rounded-lg ${inputBgColor} ${textColor} 
+                    placeholder-gray-400 border-none focus:outline-none focus:ring-1 
+                    ${isDark ? 'focus:ring-gray-600' : 'focus:ring-gray-300'}
+                    transition-all duration-300`}
+                />
+                <button
+                  onClick={() => handleSubmit(inputValue)}
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full 
+                    transition-all duration-300 hover:bg-slate-600/50
+                    ${inputValue.trim() ? 'opacity-100' : 'opacity-30'}`}
+                >
+                  <Send className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                </button>
+              </div>
+  
+              {messages.length === 1 && (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {quickReplies[language].map((reply) => (
+                    <QuickReplyButton key={reply} text={reply} onClick={() => handleSubmit(reply)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  export default ChatInterface;
+  
